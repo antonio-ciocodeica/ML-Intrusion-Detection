@@ -4,6 +4,9 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 
 def load_data(train_path, test_path):
+    """
+    Load data from the train/test data files and adds the column names
+    """
     columns = [
         "duration","protocol_type","service","flag","src_bytes","dst_bytes","land",
         "wrong_fragment","urgent","hot","num_failed_logins","logged_in","num_compromised",
@@ -24,20 +27,23 @@ def load_data(train_path, test_path):
     return df_train, df_test
 
 def preprocess(df):
-    # Drop unnecessary columns
+    """
+    Preprocess the data by:
+    - dropping unnecessary columns
+    - simplyfing the target column to binary
+    - encoding categorical features
+    - scaling the numeric features
+    """
     df = df.drop('difficulty', axis=1)
 
-    # Simplify target to binary: normal(0) / attack(1)
     df['is_attack'] = df['attack'].apply(lambda x: 0 if x == 'normal' else 1)
     df = df.drop('attack', axis=1)
 
-    # Encode categorical features
     cat_cols = ['protocol_type', 'service', 'flag']
     df = pd.get_dummies(df, columns=cat_cols)
 
-    # Scale numeric features
     scaler = StandardScaler()
-    num_cols = df.select_dtypes(include=['int64', 'float64']).columns
+    num_cols = df.select_dtypes(include=['int64', 'float64']).drop(columns=['is_attack']).columns
     df[num_cols] = scaler.fit_transform(df[num_cols])
 
     return df
@@ -59,5 +65,8 @@ def train_test_data(df_train, df_test):
 
     X_train, y_train = split_X_y(df_train)
     X_test, y_test = split_X_y(df_test)
+
+    # Make sure the test data has the same columns as the train data
+    X_test = X_test.reindex(columns=X_train.columns, fill_value=0)
 
     return X_train, X_test, y_train, y_test
