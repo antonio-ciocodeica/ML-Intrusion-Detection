@@ -1,7 +1,5 @@
 import pandas as pd
-import numpy as np
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
 
 def load_data(train_path, test_path):
     """
@@ -32,6 +30,7 @@ def preprocess(df):
     - dropping unnecessary columns
     - simplyfing the target column to binary
     - encoding categorical features
+    - separate the target from the features
     - scaling the numeric features
     """
     df = df.drop('difficulty', axis=1)
@@ -42,31 +41,11 @@ def preprocess(df):
     cat_cols = ['protocol_type', 'service', 'flag']
     df = pd.get_dummies(df, columns=cat_cols)
 
-    scaler = StandardScaler()
-    num_cols = df.select_dtypes(include=['int64', 'float64']).drop(columns=['is_attack']).columns
-    df[num_cols] = scaler.fit_transform(df[num_cols])
-
-    return df
-
-def split_X_y(df):
-    """
-    Split the data into features (X) and target (y)
-    """
     X = df.drop('is_attack', axis=1)
     y = df['is_attack']
+
+    scaler = StandardScaler()
+    num_cols = X.select_dtypes(include=['int64', 'float64']).columns
+    X[num_cols] = scaler.fit_transform(X[num_cols])
+
     return X, y
-
-def train_test_data(df_train, df_test):
-    """
-    Preprocess the train/test data and split it into X_train/test and y_train/test 
-    """
-    df_train = preprocess(df_train)
-    df_test = preprocess(df_test)
-
-    X_train, y_train = split_X_y(df_train)
-    X_test, y_test = split_X_y(df_test)
-
-    # Make sure the test data has the same columns as the train data
-    X_test = X_test.reindex(columns=X_train.columns, fill_value=0)
-
-    return X_train, X_test, y_train, y_test
