@@ -1,4 +1,6 @@
 import pandas as pd
+import numpy as np
+
 from sklearn.preprocessing import StandardScaler
 
 def load_data(train_path, test_path):
@@ -31,7 +33,6 @@ def preprocess(df):
     - simplyfing the target column to binary
     - encoding categorical features
     - separate the target from the features
-    - scaling the numeric features
     """
     df = df.drop('difficulty', axis=1)
 
@@ -44,8 +45,26 @@ def preprocess(df):
     X = df.drop('is_attack', axis=1)
     y = df['is_attack']
 
-    scaler = StandardScaler()
-    num_cols = X.select_dtypes(include=['int64', 'float64']).columns
-    X[num_cols] = scaler.fit_transform(X[num_cols])
-
     return X, y
+
+def split_and_preprocess(df_train, df_test):
+    """
+    Preprocess the train and test dataframe and split them into features (X) and target (y)
+    """
+    X_train, y_train = preprocess(df_train)
+    X_test, y_test = preprocess(df_test)
+
+    X_train, X_test = X_train.align(X_test, join="left", axis=1, fill_value=0)
+    num_cols = X_train.select_dtypes(include=['int64', 'float64']).columns
+
+    skweness = X_train.skew()
+    skewed_cols = skweness[skweness > 1].index
+    
+    X_train[skewed_cols] = np.log1p(X_train[skewed_cols])
+    X_test[skewed_cols] = np.log1p(X_test[skewed_cols])
+
+    scaler = StandardScaler()
+    X_train[num_cols] = scaler.fit_transform(X_train[num_cols])
+    X_test[num_cols] = scaler.transform(X_test[num_cols])
+
+    return X_train, X_test, y_train, y_test
